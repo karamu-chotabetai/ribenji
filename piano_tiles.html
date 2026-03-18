@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piano Tiles</title>
+
+<style>
+body{
+margin:0;
+background:#111;
+color:white;
+font-family:sans-serif;
+text-align:center;
+}
+
+#game{
+width:320px;
+height:520px;
+margin:auto;
+background:white;
+border:4px solid black;
+position:relative;
+overflow:hidden;
+}
+
+.tile{
+width:80px;
+height:140px;
+background:black;
+position:absolute;
+}
+
+button{
+margin:10px;
+padding:10px 20px;
+font-size:18px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Piano Tiles</h1>
+
+<div id="score">Score: 0</div>
+<button onclick="startGame()">START</button>
+
+<div id="game"></div>
+
+<script>
+
+const game=document.getElementById("game")
+const scoreText=document.getElementById("score")
+
+let tiles=[]
+let score=0
+let speed=3
+let running=false
+
+function playNote(){
+
+const audioCtx=new(window.AudioContext||window.webkitAudioContext)()
+
+const osc=audioCtx.createOscillator()
+const gain=audioCtx.createGain()
+
+osc.frequency.value=440
+osc.connect(gain)
+gain.connect(audioCtx.destination)
+
+gain.gain.setValueAtTime(0.4,audioCtx.currentTime)
+gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3)
+
+osc.start()
+osc.stop(audioCtx.currentTime+0.3)
+
+}
+
+function createTile(){
+
+const tile=document.createElement("div")
+tile.className="tile"
+
+let col=Math.floor(Math.random()*4)
+
+tile.style.left=(col*80)+"px"
+tile.style.top="-140px"
+
+game.appendChild(tile)
+
+tiles.push(tile)
+
+}
+
+function update(){
+
+if(!running)return
+
+tiles.forEach(tile=>{
+
+let top=parseFloat(tile.style.top)
+
+top+=speed
+
+tile.style.top=top+"px"
+
+if(top>520){
+
+gameOver()
+
+}
+
+})
+
+requestAnimationFrame(update)
+
+}
+
+game.addEventListener("click",function(e){
+
+if(!running)return
+
+let rect=game.getBoundingClientRect()
+
+let x=e.clientX-rect.left
+let y=e.clientY-rect.top
+
+let hit=false
+
+tiles.forEach(tile=>{
+
+let tRect=tile.getBoundingClientRect()
+
+let tx=tRect.left-rect.left
+let ty=tRect.top-rect.top
+
+if(x>tx && x<tx+80 && y>ty && y<ty+140){
+
+hit=true
+
+playNote()
+
+score++
+
+scoreText.innerText="Score: "+score
+
+tile.remove()
+
+}
+
+})
+
+tiles=tiles.filter(t=>document.body.contains(t))
+
+if(!hit){
+
+gameOver()
+
+}
+
+})
+
+function gameOver(){
+
+running=false
+
+alert("Game Over\nScore:"+score)
+
+tiles.forEach(t=>t.remove())
+
+tiles=[]
+
+}
+
+function startGame(){
+
+tiles.forEach(t=>t.remove())
+
+tiles=[]
+
+score=0
+
+scoreText.innerText="Score: 0"
+
+running=true
+
+setInterval(()=>{
+
+if(running)createTile()
+
+},600)
+
+update()
+
+}
+
+</script>
+
+</body>
+</html>

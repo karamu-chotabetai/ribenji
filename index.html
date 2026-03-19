@@ -3,47 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Piano Tiles</title>
+<title>✨ Piano Tiles Deluxe ✨</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
+
 body{
 margin:0;
-background:#111;
-color:white;
-font-family:sans-serif;
+font-family:'Fredoka', sans-serif;
 text-align:center;
+background: linear-gradient(135deg, #ff9a9e, #fad0c4, #a18cd1, #fbc2eb);
+background-size: 400% 400%;
+animation: bgMove 10s infinite alternate;
+color:white;
+}
+
+@keyframes bgMove{
+0%{background-position:0% 50%;}
+100%{background-position:100% 50%;}
+}
+
+h1{
+margin:10px;
+font-size:28px;
+text-shadow:2px 2px 5px rgba(0,0,0,0.3);
+}
+
+#score,#highscore{
+font-size:20px;
 }
 
 #game{
 width:320px;
 height:520px;
-margin:auto;
-background:white;
-border:4px solid black;
-position:relative;
+margin:20px auto;
+background:linear-gradient(#ffffff,#e0f7fa);
+border-radius:20px;
 overflow:hidden;
+position:relative;
+box-shadow:0 0 20px rgba(0,0,0,0.4);
 }
 
 .tile{
 width:80px;
 height:140px;
-background:black;
 position:absolute;
+border-radius:10px;
+background:linear-gradient(45deg,#ff6ec4,#7873f5);
+box-shadow:0 5px 10px rgba(0,0,0,0.3);
 }
 
 button{
-margin:10px;
 padding:10px 20px;
 font-size:18px;
+border:none;
+border-radius:20px;
+background:linear-gradient(45deg,#ff6ec4,#7873f5);
+color:white;
+box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
+
 </style>
 </head>
 
 <body>
 
-<h1>Piano Tiles</h1>
+<h1>🎹 Piano Tiles Deluxe 🎹</h1>
 
 <div id="score">Score: 0</div>
+<div id="highscore">HighScore: 0</div>
+
 <button onclick="startGame()">START</button>
 
 <div id="game"></div>
@@ -52,30 +82,55 @@ font-size:18px;
 
 const game=document.getElementById("game")
 const scoreText=document.getElementById("score")
+const highscoreText=document.getElementById("highscore")
 
 let tiles=[]
 let score=0
-let speed=3
 let running=false
+let speed=3
 
-function playNote(){
+let highscore=localStorage.getItem("pianoHighScore")||0
+highscoreText.innerText="HighScore: "+highscore
 
+/* 音楽生成（リズム同期） */
 const audioCtx=new(window.AudioContext||window.webkitAudioContext)()
+
+const melody=[262,330,392,523,392,330,262]
+let beatIndex=0
+
+function playMusic(){
+
+if(!running)return
+
+playNote(melody[beatIndex%melody.length])
+createTile()
+
+beatIndex++
+
+setTimeout(playMusic,400) // ←ここがリズム
+
+}
+
+function playNote(freq){
 
 const osc=audioCtx.createOscillator()
 const gain=audioCtx.createGain()
 
-osc.frequency.value=440
+osc.frequency.value=freq
+osc.type="sine"
+
 osc.connect(gain)
 gain.connect(audioCtx.destination)
 
 gain.gain.setValueAtTime(0.4,audioCtx.currentTime)
-gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3)
+gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.4)
 
 osc.start()
-osc.stop(audioCtx.currentTime+0.3)
+osc.stop(audioCtx.currentTime+0.4)
 
 }
+
+/* タイル */
 
 function createTile(){
 
@@ -86,6 +141,8 @@ let col=Math.floor(Math.random()*4)
 
 tile.style.left=(col*80)+"px"
 tile.style.top="-140px"
+
+tile.dataset.hit="false"
 
 game.appendChild(tile)
 
@@ -105,10 +162,8 @@ top+=speed
 
 tile.style.top=top+"px"
 
-if(top>520){
-
+if(top>520 && tile.dataset.hit==="false"){
 gameOver()
-
 }
 
 })
@@ -117,14 +172,18 @@ requestAnimationFrame(update)
 
 }
 
-game.addEventListener("click",function(e){
+/* タッチ */
+
+game.addEventListener("click",handle)
+game.addEventListener("touchstart",handle)
+
+function handle(e){
 
 if(!running)return
 
 let rect=game.getBoundingClientRect()
-
-let x=e.clientX-rect.left
-let y=e.clientY-rect.top
+let x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left
+let y=(e.touches?e.touches[0].clientY:e.clientY)-rect.top
 
 let hit=false
 
@@ -139,10 +198,9 @@ if(x>tx && x<tx+80 && y>ty && y<ty+140){
 
 hit=true
 
-playNote()
+tile.dataset.hit="true"
 
 score++
-
 scoreText.innerText="Score: "+score
 
 tile.remove()
@@ -154,44 +212,44 @@ tile.remove()
 tiles=tiles.filter(t=>document.body.contains(t))
 
 if(!hit){
-
 gameOver()
+}
 
 }
 
-})
+/* ゲーム */
+
+function startGame(){
+
+tiles.forEach(t=>t.remove())
+tiles=[]
+
+score=0
+scoreText.innerText="Score: 0"
+
+running=true
+beatIndex=0
+
+playMusic()
+update()
+
+}
 
 function gameOver(){
 
 running=false
 
-alert("Game Over\nScore:"+score)
-
-tiles.forEach(t=>t.remove())
-
-tiles=[]
-
+if(score>highscore){
+highscore=score
+localStorage.setItem("pianoHighScore",highscore)
 }
 
-function startGame(){
+highscoreText.innerText="HighScore: "+highscore
+
+alert("Game Over\nScore: "+score)
 
 tiles.forEach(t=>t.remove())
-
 tiles=[]
-
-score=0
-
-scoreText.innerText="Score: 0"
-
-running=true
-
-setInterval(()=>{
-
-if(running)createTile()
-
-},600)
-
-update()
 
 }
 
